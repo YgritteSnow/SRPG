@@ -1,0 +1,4 @@
+[submodule "Dependencies/Foundation"]
+	path = Dependencies/Foundation
+	url = https://github.com/ylqgithubylq/Foundation.git
+	branch = master
