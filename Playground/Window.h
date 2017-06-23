@@ -1,58 +1,65 @@
 #pragma once
 #include "GeometryFoundation.h"
+#include "ReferenceCount.h"
+#include "Input.h"
 #include <functional>
 #include <string>
 #include <memory>
 
-class Window
+namespace X
 {
-public:
-	
-	static std::unique_ptr<Window> Create();
+	class Window : public ReferenceCountBase<true>
+	{
+	public:
 
-	~Window();
+		static Ptr<Window> Create(std::wstring title, Size2UI size);
 
-	void StartHandlingMessages();
+		~Window();
 
-	bool IsRendering() const;
-	void SetRendering(bool rendering);
-	bool IsRunning() const;
-	void SetRunning(bool running);
+		void StartHandlingMessages();
 
-	bool IsActive() const;
-	void SetActive(bool active);
+		bool IsRendering() const;
+		void SetRendering(bool rendering);
+		bool IsRunning() const;
+		void SetRunning(bool running);
+
+		bool IsActive() const;
+		void SetActive(bool active);
 
 
 
-	/*
-	*	Client region size, not the window size.
-	*/
-	Size2UI GetClientRegionSize() const;
+		/*
+		*	Client region size, not the window size.
+		*/
+		Size2UI GetClientRegionSize() const;
 
-	/*
-	*	Upper left corner of the window.
-	*/
-	Size2SI GetWindowPosition() const;
+		/*
+		*	Upper left corner of the window.
+		*/
+		Size2SI GetWindowPosition() const;
 
-	std::wstring GetTitleText() const;
-	void SetTitleText(std::wstring const& text);
+		std::wstring GetTitleText() const;
+		void SetTitleText(std::wstring const& text);
 
-	/*
-	*	@hook: pointer is type: std::function<void(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)>*
-	*		the pointer will be cast to the type above and make a copy of the function object.
-	*/
-	void SetRawWindowsMessageHook(void const* hook);
+		/*
+		*	@hook: pointer is type: std::function<void(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)>*
+		*		the pointer will be cast to the type above and make a copy of the function object.
+		*/
+		void SetRawWindowsMessageHook(void const* hook);
 
-	/*
-	*	@return: actual type is HWND, return void* to remove windows.h dependency from hpp.
-	*/
-	void* GetHWND() const;
+		/*
+		*	@return: actual type is HWND, return void* to remove windows.h dependency from hpp.
+		*/
+		void* GetHWND() const;
 
-	void Recreate();
+		void Recreate();
 
-	void SetMessageIdle(std::function<void()> const& messageIdle);
+		void SetMessageIdle(std::function<void()> const& messageIdle);
+		void SetInputHandler(Ptr<InputHandler> inputHanlder);
 
-protected:
-	Window() = default;
-};
+	protected:
+		Window() = default;
+	};
 
+
+}

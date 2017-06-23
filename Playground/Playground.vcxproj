@@ -87,7 +87,6 @@
     <ClInclude Include="D3DHelper.h" />
     <ClInclude Include="DeviceAndContext.h" />
     <ClInclude Include="Input.h" />
-    <ClInclude Include="Utility.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

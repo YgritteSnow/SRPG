@@ -9,6 +9,7 @@
 #include <vector>
 
 using namespace std;
+using namespace X;
 
 struct WindowImpl : public Window
 {
@@ -47,49 +48,49 @@ struct WindowImpl : public Window
 			// Add all windows message handling here
 		case WM_KEYDOWN:
 		{
-			OnKeyDown(wParam);
+			OnKeyDown(uint32(wParam));
 			break;
 		}
 
 		case WM_KEYUP:
 		{
-			OnKeyUp(wParam);
+			OnKeyUp(uint32(wParam));
 			break;
 		}
 		case WM_LBUTTONDOWN:
 		{
 			wParam = VK_LBUTTON;
-			OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseDown(VK_LBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 		case WM_RBUTTONDOWN:
 		{
 			wParam = VK_RBUTTON;
-			OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseDown(VK_RBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 		case WM_MBUTTONDOWN:
 		{
 			wParam = VK_MBUTTON;
-			OnMouseDown(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseDown(VK_MBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 		case WM_LBUTTONUP:
 		{
 			wParam = VK_LBUTTON;
-			OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseUp(VK_LBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 		case WM_RBUTTONUP:
 		{
 			wParam = VK_RBUTTON;
-			OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseUp(VK_RBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 		case WM_MBUTTONUP:
 		{
 			wParam = VK_MBUTTON;
-			OnMouseUp(wParam, LOWORD(lParam), HIWORD(lParam));
+			OnMouseUp(VK_MBUTTON, LOWORD(lParam), HIWORD(lParam));
 		}
 		break;
 
@@ -260,7 +261,7 @@ struct WindowImpl : public Window
 		HINSTANCE hInstance = ::GetModuleHandle(nullptr);
 
 		DWORD style = static_cast<DWORD>(::GetWindowLongPtr(hWnd_, GWL_STYLE));
-		RECT windowRect = { left_, top_, left_ + width_, top_ + height_ };
+		RECT windowRect = { left_, top_, sint32(left_ + width_), sint32(top_ + height_) };
 		::AdjustWindowRect(&windowRect, style, false);
 
 		::DestroyWindow(hWnd_);
@@ -329,41 +330,57 @@ struct WindowImpl : public Window
 	void OnKeyDown(uint32 winKey)
 	{
 		winKey = DistinguishLeftRightShiftCtrlAlt(winKey, true);
-		XREXContext::GetInstance().GetInputCenter().InjectKeyDown(InputSemanticFromWindowsVK(winKey));
+		InputSemantic input = InputSemanticFromWindowsVK(winKey);
+		if (inputHandler_)
+		{
+			inputHandler_->OnKeyDown(input);
+		}
 	}
 
 	void OnKeyUp(uint32 winKey)
 	{
 		winKey = DistinguishLeftRightShiftCtrlAlt(winKey, false);
-		XREXContext::GetInstance().GetInputCenter().InjectKeyUp(InputSemanticFromWindowsVK(winKey));
+		InputSemantic input = InputSemanticFromWindowsVK(winKey);
+		if (inputHandler_)
+		{
+			inputHandler_->OnKeyUp(input);
+		}
 	}
 
 	void OnMouseDown(uint32 winKey, uint32 x, uint32 y)
 	{
-		XREXContext::GetInstance().GetInputCenter().InjectMouseDown(InputSemanticFromWindowsVK(winKey), x, height_ - y);
+		InputSemantic input = InputSemanticFromWindowsVK(winKey);
+		if (inputHandler_)
+		{
+			inputHandler_->OnMouseDown(input, x, height_ - y);
+		}
 	}
 
 	void OnMouseUp(uint32 winKey, uint32 x, uint32 y)
 	{
-		XREXContext::GetInstance().GetInputCenter().InjectMouseUp(InputSemanticFromWindowsVK(winKey), x, height_ - y);
+		InputSemantic input = InputSemanticFromWindowsVK(winKey);
+		if (inputHandler_)
+		{
+			inputHandler_->OnMouseUp(input, x, height_ - y);
+		}
 	}
 
 	void OnMouseWheel(uint32 winKey, uint32 x, uint32 y, sint32 wheelDelta)
 	{
-		XREXContext::GetInstance().GetInputCenter().InjectMouseWheel(InputSemantic::M_Wheel, x, height_ - y, wheelDelta);
+		if (inputHandler_)
+		{
+			inputHandler_->OnMouseWheel(InputSemantic::M_Wheel, x, height_ - y, wheelDelta);
+		}
 	}
 
 	void OnMouseMove(uint32 winKey, uint32 x, uint32 y)
 	{
-		XREXContext::GetInstance().GetInputCenter().InjectMouseMove(InputSemantic::M_Move, x, height_ - y);
+		if (inputHandler_)
+		{
+			inputHandler_->OnMouseMove(InputSemantic::M_Move, x, height_ - y);
+		}
 	}
 
-
-
-	void OnResize(uint32 width, uint32 height)
-	{
-		// TODO
-	}
 
 
 
@@ -714,6 +731,8 @@ struct WindowImpl : public Window
 	std::wstring name_;
 
 	std::function<void()> messageIdle_;
+
+	Ptr<InputHandler> inputHandler_;
 };
 
 
@@ -722,17 +741,17 @@ struct WindowImpl : public Window
 
 
 
+Ptr<Window> Window::Create(wstring title, Size2UI size)
+{
+	return CreatePtr<WindowImpl>(move(title), size);
+}
+
 void Window::SetRawWindowsMessageHook(void const* hook)
 {
 	auto thiz = static_cast<WindowImpl*>(this);
 	thiz->messageHook_ = *static_cast<std::function<void(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)> const*>(hook);
 }
 
-
-std::unique_ptr<Window> Window::Create()
-{
-	return std::unique_ptr<Window>();
-}
 
 Window::~Window()
 {
@@ -749,6 +768,12 @@ inline void Window::SetMessageIdle(std::function<void()> const & messageIdle)
 {
 	auto thiz = static_cast<WindowImpl*>(this);
 	thiz->messageIdle_ = messageIdle;
+}
+
+void Window::SetInputHandler(Ptr<InputHandler> inputHanlder)
+{
+	auto thiz = static_cast<WindowImpl*>(this);
+	thiz->inputHandler_ = move(inputHanlder);
 }
 
 
@@ -826,7 +851,7 @@ std::wstring Window::GetTitleText() const
 	sint32 length = ::GetWindowTextLength(thiz->hWnd_);
 	std::wstring title;
 	title.resize(length + 1);
-	::GetWindowText(thiz->hWnd_, &title[0], title.size());
+	::GetWindowText(thiz->hWnd_, &title[0], sint32(title.size()));
 	return title;
 }
 

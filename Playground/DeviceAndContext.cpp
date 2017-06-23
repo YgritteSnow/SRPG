@@ -1,20 +1,21 @@
 #include "DeviceAndContext.h"
 #include "Utility.h"
 #include "D3DHelper.h"
+#include "Window.h"
 #include <cmath>
 
 using namespace Microsoft::WRL;
 using namespace std;
-using namespace SRPG;
+using namespace X;
 
 
 // Constructor for DeviceResources.
 DeviceResources::DeviceResources() :
 	m_screenViewport(),
 	m_d3dFeatureLevel(D3D_FEATURE_LEVEL_9_1),
-	m_d3dRenderTargetSize(),
-	m_outputSize(),
-	m_logicalSize()
+	m_d3dRenderTargetSize(0, 0),
+	m_outputSize(0, 0),
+	m_logicalSize(0, 0)
 {
 	CreateDeviceResources();
 }
@@ -27,11 +28,8 @@ void DeviceResources::CreateDeviceResources()
 	UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-	if (SdkLayersAvailable())
-	{
-		// If the project is in a debug build, enable debugging via SDK Layers with this flag.
-		creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-	}
+	// If the project is in a debug build, enable debugging via SDK Layers with this flag.
+	creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
 	// This array defines the set of DirectX hardware feature levels this app will support.
@@ -70,13 +68,9 @@ void DeviceResources::CreateDeviceResources()
 
 
 	// Store pointers to the Direct3D 11.3 API device and immediate context.
-	ThrowIfFailed(
-		device.As(&m_d3dDevice)
-	);
+	ThrowIfFailed(device.As(&m_d3dDevice));
 
-	ThrowIfFailed(
-		context.As(&m_d3dContext)
-	);
+	ThrowIfFailed(context.As(&m_d3dContext));
 }
 
 // These resources need to be recreated every time the window size is changed.
@@ -96,13 +90,8 @@ void DeviceResources::CreateWindowSizeDependentResources()
 	if (m_swapChain != nullptr)
 	{
 		// If the swap chain already exists, resize it.
-		HRESULT hr = m_swapChain->ResizeBuffers(
-			2, // Double-buffered swap chain.
-			lround(m_d3dRenderTargetSize.Width),
-			lround(m_d3dRenderTargetSize.Height),
-			DXGI_FORMAT_B8G8R8A8_UNORM,
-			0
-		);
+		HRESULT hr = m_swapChain->ResizeBuffers(2, // Double-buffered swap chain.
+			m_d3dRenderTargetSize.X(), m_d3dRenderTargetSize.Y(), DXGI_FORMAT_B8G8R8A8_UNORM, 0);
 
 		if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
 		{
@@ -129,8 +118,8 @@ void DeviceResources::CreateWindowSizeDependentResources()
 // 		DXGI_MODE_SCANLINE_ORDER ScanlineOrdering;
 // 		DXGI_MODE_SCALING Scaling;
 
-		swapChainDesc.BufferDesc.Width = ;
-		swapChainDesc.BufferDesc.Height = ;
+		swapChainDesc.BufferDesc.Width = m_d3dRenderTargetSize.X();
+		swapChainDesc.BufferDesc.Height = m_d3dRenderTargetSize.Y();
 		swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -143,103 +132,37 @@ void DeviceResources::CreateWindowSizeDependentResources()
 
 		// This sequence obtains the DXGI factory that was used to create the Direct3D device above.
 		ComPtr<IDXGIDevice3> dxgiDevice;
-		ThrowIfFailed(
-			m_d3dDevice.As(&dxgiDevice)
-		);
+		ThrowIfFailed(m_d3dDevice.As(&dxgiDevice));
 
 		ComPtr<IDXGIAdapter> dxgiAdapter;
-		ThrowIfFailed(
-			dxgiDevice->GetAdapter(&dxgiAdapter)
-		);
+		ThrowIfFailed(dxgiDevice->GetAdapter(&dxgiAdapter));
 
 		ComPtr<IDXGIFactory4> dxgiFactory;
-		ThrowIfFailed(
-			dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory))
-		);
+		ThrowIfFailed(dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory)));
 
 
 		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullScreenDesc = { 0 };
 
-		ComPtr<IDXGISwapChain1> swapChain;
-		ThrowIfFailed(
-			dxgiFactory->CreateSwapChain(
-				m_d3dDevice.Get(),
-				&swapChainDesc,
-				&swapChain
-			)
-		);
-		ThrowIfFailed(
-			swapChain.As(&m_swapChain)
-		);
+		ComPtr<IDXGISwapChain> swapChain;
+		ThrowIfFailed(dxgiFactory->CreateSwapChain(m_d3dDevice.Get(), &swapChainDesc, &swapChain));
+		ThrowIfFailed(swapChain.As(&m_swapChain));
 
 		// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
 		// ensures that the application will only render after each VSync, minimizing power consumption.
-		ThrowIfFailed(
-			dxgiDevice->SetMaximumFrameLatency(1)
-		);
+		ThrowIfFailed(dxgiDevice->SetMaximumFrameLatency(1));
 	}
-
-	// Set the proper orientation for the swap chain, and generate 2D and
-	// 3D matrix transformations for rendering to the rotated swap chain.
-	// Note the rotation angle for the 2D and 3D transforms are different.
-	// This is due to the difference in coordinate spaces.  Additionally,
-	// the 3D matrix is specified explicitly to avoid rounding errors.
-
-	switch (displayRotation)
-	{
-	case DXGI_MODE_ROTATION_IDENTITY:
-		m_orientationTransform2D = Matrix3x2F::Identity();
-		m_orientationTransform3D = ScreenRotation::Rotation0;
-		break;
-
-	case DXGI_MODE_ROTATION_ROTATE90:
-		m_orientationTransform2D =
-			Matrix3x2F::Rotation(90.0f) *
-			Matrix3x2F::Translation(m_logicalSize.Height, 0.0f);
-		m_orientationTransform3D = ScreenRotation::Rotation270;
-		break;
-
-	case DXGI_MODE_ROTATION_ROTATE180:
-		m_orientationTransform2D =
-			Matrix3x2F::Rotation(180.0f) *
-			Matrix3x2F::Translation(m_logicalSize.Width, m_logicalSize.Height);
-		m_orientationTransform3D = ScreenRotation::Rotation180;
-		break;
-
-	case DXGI_MODE_ROTATION_ROTATE270:
-		m_orientationTransform2D =
-			Matrix3x2F::Rotation(270.0f) *
-			Matrix3x2F::Translation(0.0f, m_logicalSize.Width);
-		m_orientationTransform3D = ScreenRotation::Rotation90;
-		break;
-
-	default:
-		throw ref new FailureException();
-	}
-
-	ThrowIfFailed(
-		m_swapChain->SetRotation(displayRotation)
-	);
 
 	// Create a render target view of the swap chain back buffer.
 	ComPtr<ID3D11Texture2D1> backBuffer;
-	ThrowIfFailed(
-		m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))
-	);
+	ThrowIfFailed(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
 
-	ThrowIfFailed(
-		m_d3dDevice->CreateRenderTargetView1(
-			backBuffer.Get(),
-			nullptr,
-			&m_d3dRenderTargetView
-		)
-	);
+	ThrowIfFailed(m_d3dDevice->CreateRenderTargetView1(backBuffer.Get(), nullptr, &m_d3dRenderTargetView));
 
 	// Create a depth stencil view for use with 3D rendering if needed.
 	CD3D11_TEXTURE2D_DESC1 depthStencilDesc(
 		DXGI_FORMAT_D24_UNORM_S8_UINT,
-		lround(m_d3dRenderTargetSize.Width),
-		lround(m_d3dRenderTargetSize.Height),
+		m_d3dRenderTargetSize.X(),
+		m_d3dRenderTargetSize.Y(),
 		1, // This depth stencil view has only one texture.
 		1, // Use a single mipmap level.
 		D3D11_BIND_DEPTH_STENCIL
@@ -267,8 +190,8 @@ void DeviceResources::CreateWindowSizeDependentResources()
 	m_screenViewport = CD3D11_VIEWPORT(
 		0.0f,
 		0.0f,
-		m_d3dRenderTargetSize.Width,
-		m_d3dRenderTargetSize.Height
+		m_d3dRenderTargetSize.X(),
+		m_d3dRenderTargetSize.Y()
 	);
 
 	m_d3dContext->RSSetViewports(1, &m_screenViewport);

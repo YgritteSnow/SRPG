@@ -1,11 +1,16 @@
+#pragma once
+#include "ReferenceCount.h"
+#include "GeometryFoundation.h"
 #include <d3d11_4.h>
 #include <dxgi1_5.h>
 #include <wrl\client.h>
 
 
-namespace SRPG
+namespace X
 {
-	class DeviceResources
+	class Window;
+
+	class DeviceResources : public ReferenceCountBase<true>
 	{
 	public:
 		DeviceResources();
@@ -52,7 +57,7 @@ namespace SRPG
 		void CreateWindowSizeDependentResources();
 		void UpdateRenderTargetSize();
 
-		HWND m_window;
+		Ptr<Window> m_window;
 
 		// Direct3D objects.
 		Microsoft::WRL::ComPtr<ID3D11Device3>			m_d3dDevice;
@@ -67,9 +72,9 @@ namespace SRPG
 
 		// Cached device properties.
 		D3D_FEATURE_LEVEL								m_d3dFeatureLevel;
-		Windows::Foundation::Size						m_d3dRenderTargetSize;
-		Windows::Foundation::Size						m_outputSize;
-		Windows::Foundation::Size						m_logicalSize;
+		Size2UI											m_d3dRenderTargetSize;
+		Size2UI											m_outputSize;
+		Size2UI											m_logicalSize;
 
 	};
 }

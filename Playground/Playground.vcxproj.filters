@@ -32,9 +32,6 @@
     <ClInclude Include="DeviceAndContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utility.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="D3DHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
