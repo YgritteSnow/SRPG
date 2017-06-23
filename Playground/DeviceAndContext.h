@@ -9,7 +9,7 @@ namespace SRPG
 	{
 	public:
 		DeviceResources();
-		void SetWindow();
+		void SetWindow(HWND window);
 		void ValidateDevice();
 		void HandleDeviceLost();
 
@@ -51,6 +51,8 @@ namespace SRPG
 		void CreateDeviceResources();
 		void CreateWindowSizeDependentResources();
 		void UpdateRenderTargetSize();
+
+		HWND m_window;
 
 		// Direct3D objects.
 		Microsoft::WRL::ComPtr<ID3D11Device3>			m_d3dDevice;

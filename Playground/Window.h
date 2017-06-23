@@ -1,0 +1,58 @@
+#pragma once
+#include "GeometryFoundation.h"
+#include <functional>
+#include <string>
+#include <memory>
+
+class Window
+{
+public:
+	
+	static std::unique_ptr<Window> Create();
+
+	~Window();
+
+	void StartHandlingMessages();
+
+	bool IsRendering() const;
+	void SetRendering(bool rendering);
+	bool IsRunning() const;
+	void SetRunning(bool running);
+
+	bool IsActive() const;
+	void SetActive(bool active);
+
+
+
+	/*
+	*	Client region size, not the window size.
+	*/
+	Size2UI GetClientRegionSize() const;
+
+	/*
+	*	Upper left corner of the window.
+	*/
+	Size2SI GetWindowPosition() const;
+
+	std::wstring GetTitleText() const;
+	void SetTitleText(std::wstring const& text);
+
+	/*
+	*	@hook: pointer is type: std::function<void(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)>*
+	*		the pointer will be cast to the type above and make a copy of the function object.
+	*/
+	void SetRawWindowsMessageHook(void const* hook);
+
+	/*
+	*	@return: actual type is HWND, return void* to remove windows.h dependency from hpp.
+	*/
+	void* GetHWND() const;
+
+	void Recreate();
+
+	void SetMessageIdle(std::function<void()> const& messageIdle);
+
+protected:
+	Window() = default;
+};
+

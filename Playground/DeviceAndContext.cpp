@@ -335,7 +335,7 @@ void DeviceResources::UpdateRenderTargetSize()
 }
 
 // This method is called when the CoreWindow is created (or re-created).
-void DeviceResources::SetWindow()
+void DeviceResources::SetWindow(HWND window)
 {
 	m_window = window;
 	m_logicalSize = Windows::Foundation::Size(window->Bounds.Width, window->Bounds.Height);
