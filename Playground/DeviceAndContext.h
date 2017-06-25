@@ -16,10 +16,11 @@ namespace X
 		DeviceAndContext(Ptr<Window> window);
 		~DeviceAndContext();
 		void ValidateDevice();
-		void HandleDeviceLost();
+		void HandleDeviceLost(HRESULT hr);
 
 		void Present();
 
+		void UpdateWindowSize();
 
 		ID3D11Device3* GetD3DDevice() const
 		{
@@ -48,8 +49,8 @@ namespace X
 		}
 
 	private:
-		void CreateDeviceResources();
-		void CreateWindowSizeDependentResources();
+		void CreateDeviceAndContext();
+		void CreateSwapChain();
 		void UpdateRenderTargetSize();
 
 		Ptr<Window> _window;
@@ -66,7 +67,5 @@ namespace X
 
 		// Cached device properties.
 		D3D_FEATURE_LEVEL				_d3dFeatureLevel;
-		Size2UI							_d3dRenderTargetSize;
-
 	};
 }

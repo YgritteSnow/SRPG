@@ -14,9 +14,8 @@ DeviceAndContext::DeviceAndContext(Ptr<Window> window) :
 	_d3dFeatureLevel(D3D_FEATURE_LEVEL_9_1),
 	_window(move(window))
 {
-	_d3dRenderTargetSize = _window->GetClientRegionSize();
-	CreateDeviceResources();
-	CreateWindowSizeDependentResources();
+	CreateDeviceAndContext();
+	CreateSwapChain();
 }
 
 DeviceAndContext::~DeviceAndContext()
@@ -25,7 +24,7 @@ DeviceAndContext::~DeviceAndContext()
 
 
 // Configures the Direct3D device, and stores handles to it and the device context.
-void DeviceAndContext::CreateDeviceResources()
+void DeviceAndContext::CreateDeviceAndContext()
 {
 	// This flag adds support for surfaces with a different color channel ordering
 	// than the API default. It is required for compatibility with Direct2D.
@@ -78,7 +77,7 @@ void DeviceAndContext::CreateDeviceResources()
 }
 
 // These resources need to be recreated every time the window size is changed.
-void DeviceAndContext::CreateWindowSizeDependentResources()
+void DeviceAndContext::CreateSwapChain()
 {
 	// Clear the previous window size specific context.
 	ID3D11RenderTargetView* nullViews[] = { nullptr };
@@ -89,17 +88,19 @@ void DeviceAndContext::CreateWindowSizeDependentResources()
 
 	UpdateRenderTargetSize();
 
+	Size2UI d3dRenderTargetSize = _window->GetClientRegionSize();
+
 
 	if (_swapChain != nullptr)
 	{
 		// If the swap chain already exists, resize it.
 		HRESULT hr = _swapChain->ResizeBuffers(2, // Double-buffered swap chain.
-			_d3dRenderTargetSize.X(), _d3dRenderTargetSize.Y(), DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+			d3dRenderTargetSize.X(), d3dRenderTargetSize.Y(), DXGI_FORMAT_B8G8R8A8_UNORM, 0);
 
 		if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
 		{
 			// If the device was removed for any reason, a new device and swap chain will need to be created.
-			HandleDeviceLost();
+			HandleDeviceLost(hr);
 
 			// Everything is set up now. Do not continue execution of this method. HandleDeviceLost will reenter this method 
 			// and correctly set up the new device.
@@ -115,8 +116,8 @@ void DeviceAndContext::CreateWindowSizeDependentResources()
 		// Otherwise, create a new one using the same adapter as the existing Direct3D device.
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
 
-		swapChainDesc.BufferDesc.Width = _d3dRenderTargetSize.X();
-		swapChainDesc.BufferDesc.Height = _d3dRenderTargetSize.Y();
+		swapChainDesc.BufferDesc.Width = d3dRenderTargetSize.X();
+		swapChainDesc.BufferDesc.Height = d3dRenderTargetSize.Y();
 		swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -158,7 +159,7 @@ void DeviceAndContext::CreateWindowSizeDependentResources()
 	ThrowIfFailed(_d3dDevice->CreateRenderTargetView1(backBuffer.Get(), nullptr, &_d3dRenderTargetView));
 
 	// Set the 3D rendering viewport to target the entire window.
-	_screenViewport = CD3D11_VIEWPORT(0.0f, 0.0f, float32(_d3dRenderTargetSize.X()), float32(_d3dRenderTargetSize.Y()));
+	_screenViewport = CD3D11_VIEWPORT(0.0f, 0.0f, float32(d3dRenderTargetSize.X()), float32(d3dRenderTargetSize.Y()));
 
 	_d3dContext->RSSetViewports(1, &_screenViewport);
 }
@@ -217,13 +218,15 @@ void DeviceAndContext::ValidateDevice()
 		previousDefaultAdapter = nullptr;
 
 		// Create a new device and swap chain.
-		HandleDeviceLost();
+		HandleDeviceLost(_d3dDevice->GetDeviceRemovedReason());
 	}
 }
 
 // Recreate all device resources and set them back to the current state.
-void DeviceAndContext::HandleDeviceLost()
+void DeviceAndContext::HandleDeviceLost(HRESULT hr)
 {
+	ThrowIfFailed(hr); // TODO try to see when this will happen.
+
 	_swapChain = nullptr;
 
 // 	if (m_deviceNotify != nullptr)
@@ -231,8 +234,8 @@ void DeviceAndContext::HandleDeviceLost()
 // 		m_deviceNotify->OnDeviceLost();
 // 	}
 
-	CreateDeviceResources();
-	CreateWindowSizeDependentResources();
+	CreateDeviceAndContext();
+	CreateSwapChain();
 
 // 	if (m_deviceNotify != nullptr)
 // 	{
@@ -244,7 +247,7 @@ void DeviceAndContext::HandleDeviceLost()
 // Present the contents of the swap chain to the screen.
 void DeviceAndContext::Present()
 {
-	// The first argument (value : 1) instructs DXGI to block until VSync, putting the application
+	// The first argument (value: 1) instructs DXGI to block until VSync, putting the application
 	// to sleep until the next VSync. This ensures we don't waste any cycles rendering
 	// frames that will never be displayed to the screen.
 	DXGI_PRESENT_PARAMETERS parameters = { 0 };
@@ -260,10 +263,15 @@ void DeviceAndContext::Present()
 	// must recreate all device resources.
 	if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
 	{
-		HandleDeviceLost();
+		HandleDeviceLost(hr);
 	}
 	else
 	{
 		ThrowIfFailed(hr);
 	}
+}
+
+void DeviceAndContext::UpdateWindowSize()
+{
+	CreateSwapChain();
 }

@@ -54,7 +54,8 @@ namespace X
 
 		void Recreate();
 
-		void SetMessageIdle(std::function<void()> const& messageIdle);
+		void SetMessageIdle(std::function<void()> messageIdle);
+		void SetResizeHandler(std::function<void(uint32 width, uint32 height)> onResize);
 		void SetInputHandler(Ptr<InputHandler> inputHanlder);
 
 	protected:

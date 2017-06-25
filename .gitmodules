@@ -2,3 +2,6 @@
 	path = Dependencies/Foundation
 	url = https://github.com/ylqgithubylq/Foundation.git
 	branch = master
+[submodule "Dependencies/3rdParty/imgui"]
+	path = Dependencies/3rdParties/imgui
+	url = https://github.com/ocornut/imgui.git

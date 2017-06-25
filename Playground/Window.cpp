@@ -192,7 +192,7 @@ struct WindowImpl : public Window
 		}
 		else
 		{
-			style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+			style = WS_OVERLAPPEDWINDOW;
 		}
 		::AdjustWindowRect(&windowRect, style, false);
 		windowLeft_ = windowRect.left;
@@ -319,13 +319,20 @@ struct WindowImpl : public Window
 				OnMessageIdle();
 			}
 		}
+
 		messageIdle_ = nullptr;
+		onResize_ = nullptr;
 		inputHandler_ = nullptr;
 	}
 
 	void OnResize(uint32 width, uint32 height)
 	{
-		// TODO
+		width_ = width;
+		height_ = height;
+		if (onResize_)
+		{
+			onResize_(width, height);
+		}
 	}
 
 	void OnKeyDown(uint32 winKey)
@@ -729,9 +736,11 @@ struct WindowImpl : public Window
 	sint32 windowLeft_;
 	sint32 windowTop_;
 
-	std::wstring name_;
+	wstring name_;
 
-	std::function<void()> messageIdle_;
+	function<void()> messageIdle_;
+
+	function<void(uint32 width, uint32 height)> onResize_;
 
 	Ptr<InputHandler> inputHandler_;
 };
@@ -771,10 +780,16 @@ void Window::Recreate()
 	thiz->DoRecreate();
 }
 
-void Window::SetMessageIdle(std::function<void()> const & messageIdle)
+void Window::SetMessageIdle(function<void()> messageIdle)
 {
 	auto thiz = static_cast<WindowImpl*>(this);
-	thiz->messageIdle_ = messageIdle;
+	thiz->messageIdle_ = move(messageIdle);
+}
+
+void Window::SetResizeHandler(function<void(uint32 width, uint32 height)> onResize)
+{
+	auto thiz = static_cast<WindowImpl*>(this);
+	thiz->onResize_ = move(onResize);
 }
 
 void Window::SetInputHandler(Ptr<InputHandler> inputHanlder)
