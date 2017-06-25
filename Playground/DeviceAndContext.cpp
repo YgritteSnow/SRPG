@@ -127,8 +127,8 @@ void DeviceAndContext::CreateSwapChain()
 		swapChainDesc.BufferCount = 2;									// Use double-buffering to minimize latency.
 		swapChainDesc.OutputWindow = reinterpret_cast<HWND>(_window->GetHWND());
 		swapChainDesc.Windowed = TRUE;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	// All Windows Store apps must use _FLIP_ SwapEffect.
-		swapChainDesc.Flags = 0;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD/*DXGI_SWAP_EFFECT_FLIP_DISCARD*/;	// All Windows Store apps must use _FLIP_ SwapEffect.
+		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 		// This sequence obtains the DXGI factory that was used to create the Direct3D device above.
 		ComPtr<IDXGIDevice3> dxgiDevice;
@@ -149,7 +149,7 @@ void DeviceAndContext::CreateSwapChain()
 
 		// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
 		// ensures that the application will only render after each VSync, minimizing power consumption.
-		ThrowIfFailed(dxgiDevice->SetMaximumFrameLatency(1));
+		//ThrowIfFailed(dxgiDevice->SetMaximumFrameLatency(1));
 	}
 
 	// Create a render target view of the swap chain back buffer.
