@@ -100,10 +100,18 @@ struct IMGUISystemD3D11Impl : public IMGUISystemD3D11
 		float        mvp[4][4];
 	};
 
+
+	virtual void ImGui_ImplDX11_Render() override
+	{
+		ImGui::Render();
+		ImDrawData* drawData = ImGui::GetDrawData();
+		ImGui_ImplDX11_RenderDrawLists(drawData);
+	}
+
 	// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 	// If text or lines are blurry when integrating ImGui in your engine:
 	// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-	virtual void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data) override
+	void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
 	{
 		ID3D11DeviceContext* ctx = g_pd3dDeviceContext;
 
@@ -552,3 +560,4 @@ Ptr<IMGUISystemD3D11> IMGUISystemD3D11::Create()
 {
 	return CreatePtr<IMGUISystemD3D11Impl>();
 }
+

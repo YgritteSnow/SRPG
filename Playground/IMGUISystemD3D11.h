@@ -22,7 +22,7 @@ namespace X
 		virtual bool ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContext* device_context) = 0;
 		virtual void ImGui_ImplDX11_Shutdown() = 0;
 		virtual void ImGui_ImplDX11_NewFrame() = 0;
-		virtual void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data) = 0;
+		virtual void ImGui_ImplDX11_Render() = 0;
 
 		// Use if you want to reset your rendering device without losing ImGui state.
 		virtual void ImGui_ImplDX11_InvalidateDeviceObjects() = 0;

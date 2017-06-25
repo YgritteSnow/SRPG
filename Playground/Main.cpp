@@ -63,10 +63,8 @@ int main()
 		deviceAndContext->GetD3DDeviceContext()->ClearRenderTargetView(deviceAndContext->GetBackBufferRenderTargetView(), (float*)&gui->clear_col);
 		ID3D11RenderTargetView* rtvs[] = { deviceAndContext->GetBackBufferRenderTargetView() };
 		deviceAndContext->GetD3DDeviceContext()->OMSetRenderTargets(ArraySize(rtvs), rtvs, nullptr);
-		ImGui::Render();
-		ImDrawData* drawData = ImGui::GetDrawData();
-		imgui->ImGui_ImplDX11_RenderDrawLists(drawData);
 
+		imgui->ImGui_ImplDX11_Render();
 		deviceAndContext->Present();
 
 		cout << "hello" << endl;
