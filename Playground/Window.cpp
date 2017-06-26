@@ -323,6 +323,7 @@ struct WindowImpl : public Window
 		messageIdle_ = nullptr;
 		onResize_ = nullptr;
 		inputHandler_ = nullptr;
+		messageHook_ = nullptr;
 	}
 
 	void OnResize(uint32 width, uint32 height)

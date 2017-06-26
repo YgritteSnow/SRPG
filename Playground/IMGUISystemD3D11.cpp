@@ -23,6 +23,7 @@
 #include "IMGUIVertexShader.hlsl.Release.pcsh"
 #include "IMGUIPixelShader.hlsl.Release.pcsh"
 #endif
+#include "D3DHelper.h"
 
 using namespace X;
 
@@ -375,6 +376,8 @@ struct IMGUISystemD3D11Impl : public IMGUISystemD3D11
 			if (g_pd3dDevice->CreateVertexShader(CompiledShaderCode_IMGUIVertexShader_main, ArraySize(CompiledShaderCode_IMGUIVertexShader_main), NULL, &g_pVertexShader) != S_OK)
 				return false;
 
+			SetDebugName(g_pVertexShader, "IMGUI Vertex Shader");
+
 			// Create the input layout
 			D3D11_INPUT_ELEMENT_DESC local_layout[] = {
 				{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -400,6 +403,8 @@ struct IMGUISystemD3D11Impl : public IMGUISystemD3D11
 		{
 			if (g_pd3dDevice->CreatePixelShader(CompiledShaderCode_IMGUIPixelShader_main, ArraySize(CompiledShaderCode_IMGUIPixelShader_main), NULL, &g_pPixelShader) != S_OK)
 				return false;
+
+			SetDebugName(g_pPixelShader, "IMGUI Pixel Shader");
 		}
 
 		// Create the blending setup

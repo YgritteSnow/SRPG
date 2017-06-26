@@ -64,7 +64,10 @@ int main()
 		ID3D11RenderTargetView* rtvs[] = { deviceAndContext->GetBackBufferRenderTargetView() };
 		deviceAndContext->GetD3DDeviceContext()->OMSetRenderTargets(ArraySize(rtvs), rtvs, nullptr);
 
-		imgui->ImGui_ImplDX11_Render();
+		{
+			auto section = deviceAndContext->StartEventSection(L"IMGUI");
+			imgui->ImGui_ImplDX11_Render();
+		}
 		deviceAndContext->Present();
 
 		cout << "hello" << endl;
@@ -74,3 +77,28 @@ int main()
 	imgui->ImGui_ImplDX11_Shutdown();
 
 }
+
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
+
+struct DML
+{
+	DML()
+	{
+		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	}
+	~DML()
+	{
+		if (_CrtDumpMemoryLeaks())
+		{
+			OutputDebugString(L"memory leaks.");
+		}
+		else
+		{
+			OutputDebugString(L"no memory leaks.");
+		}
+		//std::cin.get();
+	}
+} _dml;

@@ -4,6 +4,8 @@
 #include "Window.h"
 #include <cmath>
 
+#include <DXGIDebug.h>
+
 using namespace Microsoft::WRL;
 using namespace std;
 using namespace X;
@@ -20,8 +22,38 @@ DeviceAndContext::DeviceAndContext(Ptr<Window> window) :
 
 DeviceAndContext::~DeviceAndContext()
 {
+	FreeAllDXObjects();
+#ifdef _DEBUG
+	
+// 	ThrowIfFailed(_debug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY | D3D11_RLDO_DETAIL));
+// 	OutputDebugString(L"End of D3D11Debug.\n");
+// 	ThrowIfFailed(_dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY)));
+// 	OutputDebugString(L"End of DXGIDebug ReportLiveObjects -- DXGI_DEBUG_RLO_SUMMARY.\n");
+// 	ThrowIfFailed(_dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL)));
+// 	OutputDebugString(L"End of DXGIDebug ReportLiveObjects -- DXGI_DEBUG_RLO_DETAIL.\n");
+
+#endif
+
 }
 
+
+DXEventSection DeviceAndContext::StartEventSection(std::wstring const & name)
+{
+#ifdef _DEBUG
+	return DXEventSection(_annotation.Get(), name);
+#else
+	return DXEventSection(nullptr, name);
+#endif // _DEBUG
+}
+
+DXEventSection DeviceAndContext::StartEventSection(wchar_t* name)
+{
+#ifdef _DEBUG
+	return DXEventSection(_annotation.Get(), name);
+#else
+	return DXEventSection(nullptr, name);
+#endif // _DEBUG
+}
 
 // Configures the Direct3D device, and stores handles to it and the device context.
 void DeviceAndContext::CreateDeviceAndContext()
@@ -74,6 +106,14 @@ void DeviceAndContext::CreateDeviceAndContext()
 	ThrowIfFailed(device.As(&_d3dDevice));
 
 	ThrowIfFailed(context.As(&_d3dContext));
+
+	SetDebugName(_d3dDevice, "Device");
+	SetDebugName(_d3dContext, "Context");
+
+#ifdef _DEBUG
+	CreateDebugFacility();
+#endif
+
 }
 
 // These resources need to be recreated every time the window size is changed.
@@ -85,8 +125,6 @@ void DeviceAndContext::CreateSwapChain()
 	_d3dContext->OMSetRenderTargets(ArraySize(nullViews), nullViews, nullptr);
 	_d3dRenderTargetView = nullptr;
 	_d3dContext->Flush1(D3D11_CONTEXT_TYPE_ALL, nullptr);
-
-	UpdateRenderTargetSize();
 
 	Size2UI d3dRenderTargetSize = _window->GetClientRegionSize();
 
@@ -157,17 +195,23 @@ void DeviceAndContext::CreateSwapChain()
 	ThrowIfFailed(_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
 
 	ThrowIfFailed(_d3dDevice->CreateRenderTargetView1(backBuffer.Get(), nullptr, &_d3dRenderTargetView));
-
+	SetDebugName(_d3dRenderTargetView, "Swap Chain Back Buffer RTV");
 	// Set the 3D rendering viewport to target the entire window.
 	_screenViewport = CD3D11_VIEWPORT(0.0f, 0.0f, float32(d3dRenderTargetSize.X()), float32(d3dRenderTargetSize.Y()));
 
 	_d3dContext->RSSetViewports(1, &_screenViewport);
 }
 
-// Determine the dimensions of the render target and whether it will be scaled down.
-void DeviceAndContext::UpdateRenderTargetSize()
+void DeviceAndContext::FreeAllDXObjects()
 {
+	_d3dContext->ClearState();
+	_d3dContext->Flush1(D3D11_CONTEXT_TYPE_ALL, nullptr);
+	_d3dDevice = nullptr;
+	_d3dContext = nullptr;
+	_swapChain = nullptr;
+	_d3dRenderTargetView = nullptr;
 }
+
 
 
 // This method is called in the event handler for the DisplayContentsInvalidated event.
@@ -275,3 +319,37 @@ void DeviceAndContext::UpdateWindowSize()
 {
 	CreateSwapChain();
 }
+
+
+#ifdef _DEBUG
+
+void DeviceAndContext::CreateDebugFacility()
+{
+	ComPtr<ID3D11InfoQueue> infoQueue;
+	ThrowIfFailed(_d3dDevice->QueryInterface<ID3D11InfoQueue>(&infoQueue));
+	ThrowIfFailed(_d3dDevice->QueryInterface<ID3D11Debug>(&_debug));
+
+// 	infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+// 	infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+// 	infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
+// 	infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_INFO, true);
+// 	infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_MESSAGE, true);
+// 	infoQueue->SetBreakOnCategory(D3D11_MESSAGE_CATEGORY_STATE_CREATION, false);
+
+
+	ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+	DXGIGetDebugInterface1(0, IID_PPV_ARGS(&_dxgiDebug));
+	DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue));
+
+	dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+	dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+	dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, true);
+	dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO, true);
+	dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE, true);
+	dxgiInfoQueue->SetBreakOnCategory(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_CREATION, false);
+
+	ThrowIfFailed(_d3dContext->QueryInterface<ID3DUserDefinedAnnotation>(&_annotation));
+}
+
+#endif // _DEBUG
+

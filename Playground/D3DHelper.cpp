@@ -4,8 +4,9 @@
 #include <comdef.h>
 
 using namespace std;
+using namespace X;
 
-wstring TextFromHResult(HRESULT hr)
+wstring X::TextFromHResult(HRESULT hr)
 {
 	_com_error error(hr);
 	wchar_t msg[1024];
